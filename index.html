@@ -238,191 +238,239 @@
             <button class="download-button" id="downloadButton">Download Image</button>
         </div>
     </div>
-    <br><br><br><Br><br><br>
+    <br><br><br><Br><br>
 
     <footer>
         <p>&copy; 2025 Siddhesh Chaube. All Rights Reserved.</p>
         <div class="social-links">
-            <a href="https://in.linkedin.com/in/siddhesh-chaube">LinkedIn</a>
-            <a href="https://github.com/ogsiddhesh/ogsiddhesh">Github</a>
+            <!-- <a href="https://in.linkedin.com/in/siddhesh-chaube">LinkedIn</a>
+            <a href="https://github.com/ogsiddhesh/ogsiddhesh">Github</a> -->
             </div>
     </footer>
 
     <script>
         const fileInput = document.getElementById('fileInput');
-        const dragArea = document.getElementById('dragArea');
-        const cropContainer = document.getElementById('cropContainer');
-        const sourceImage = document.getElementById('sourceImage');
-        const cropArea = document.getElementById('cropArea');
-        const downloadButton = document.getElementById('downloadButton');
-        const handles = document.querySelectorAll('.resize-handle');
+const dragArea = document.getElementById('dragArea');
+const cropContainer = document.getElementById('cropContainer');
+const sourceImage = document.getElementById('sourceImage');
+const cropArea = document.getElementById('cropArea');
+const downloadButton = document.getElementById('downloadButton');
+const handles = document.querySelectorAll('.resize-handle');
 
-        let isDragging = false;
-        let isResizing = false;
-        let currentHandle = null;
-        let startX, startY, startLeft, startTop, startWidth, startHeight;
+let isDragging = false;
+let isResizing = false;
+let currentHandle = null;
+let startX, startY, startLeft, startTop, startWidth, startHeight;
 
-        // Handlinng file upload
-        fileInput.addEventListener('change', handleFileSelect);
+// Handling file upload
+fileInput.addEventListener('change', handleFileSelect);
+
+// Drag and drop handlers
+dragArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dragArea.classList.add('active');
+});
+
+dragArea.addEventListener('dragleave', () => {
+    dragArea.classList.remove('active');
+});
+
+dragArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragArea.classList.remove('active');
+    const file = e.dataTransfer.files[0];
+    if (file && isValidFile(file)) {
+        handleFile(file);
+    }
+});
+
+function isValidFile(file) {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxSize = 30 * 1024 * 1024; // 30MB
+    return validTypes.includes(file.type) && file.size <= maxSize;
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file && isValidFile(file)) {
+        handleFile(file);
+    }
+}
+
+function handleFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        sourceImage.src = e.target.result;
+        sourceImage.onload = () => {
+            cropContainer.style.display = 'block';
+            downloadButton.style.display = 'block';
+            initializeCropArea();
+            setupEventListeners();
+        };
+    };
+    reader.readAsDataURL(file);
+}
+
+function initializeCropArea() {
+    const size = Math.min(sourceImage.width, sourceImage.height) / 2;
+    cropArea.style.width = size + 'px';
+    cropArea.style.height = size + 'px';
+    cropArea.style.left = (sourceImage.width - size) / 2 + 'px';
+    cropArea.style.top = (sourceImage.height - size) / 2 + 'px';
+}
+
+function setupEventListeners() {
+    // Desktop Dragging
+    cropArea.addEventListener('mousedown', startDragging);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', stopDragging);
+
+    // Mobile Touch Events
+    cropArea.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startDragging(e);
+    });
+    document.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        drag(e);
+    });
+    document.addEventListener('touchend', stopDragging);
+
+
+    // Resizing
+    handles.forEach(handle => {
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            currentHandle = e.target;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = cropArea.offsetWidth;
+            startHeight = cropArea.offsetHeight;
+            startLeft = cropArea.offsetLeft;
+            startTop = cropArea.offsetTop;
+            e.stopPropagation();
+        });
+
+        handle.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isResizing = true;
+            currentHandle = e.target;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startWidth = cropArea.offsetWidth;
+            startHeight = cropArea.offsetHeight;
+            startLeft = cropArea.offsetLeft;
+            startTop = cropArea.offsetTop;
+            e.stopPropagation();
+        });
+    });
+}
+
+function startDragging(e) {
+    if (e.type === "mousedown") {
+        if (e.target === cropArea) {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = cropArea.offsetLeft;
+            startTop = cropArea.offsetTop;
+        }
+    } else if (e.type === "touchstart") {
+        if (e.target === cropArea) {
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startLeft = cropArea.offsetLeft;
+            startTop = cropArea.offsetTop;
+        }
+    }
+}
+
+function drag(e) {
+    let deltaX, deltaY;
+    if (isDragging) {
+        if (e.type === "mousemove") {
+            deltaX = e.clientX - startX;
+            deltaY = e.clientY - startY;
+        } else if (e.type === "touchmove") {
+            deltaX = e.touches[0].clientX - startX;
+            deltaY = e.touches[0].clientY - startY;
+        }
+
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+
+        newLeft = Math.max(0, Math.min(newLeft, sourceImage.width - cropArea.offsetWidth));
+        newTop = Math.max(0, Math.min(newTop, sourceImage.height - cropArea.offsetHeight));
+
+        cropArea.style.left = newLeft + 'px';
+        cropArea.style.top = newTop + 'px';
+    } else if (isResizing) {
+        if (e.type === "mousemove") {
+            deltaX = e.clientX - startX;
+            deltaY = e.clientY - startY;
+        } else if (e.type === "touchmove") {
+            deltaX = e.touches[0].clientX - startX;
+            deltaY = e.touches[0].clientY - startY;
+        }
+
+        let newSize = Math.min(startWidth + deltaX, startHeight + deltaY);
+        newSize = Math.max(50, newSize); // Minimum size
+
+        cropArea.style.width = newSize + 'px';
+        cropArea.style.height = newSize + 'px';
+
+        if (currentHandle.classList.contains('nw') || currentHandle.classList.contains('sw')) {
+            const newLeft = startLeft + (startWidth - newSize);
+            cropArea.style.left = Math.max(0, newLeft) + 'px';
+        }
+
+        if (currentHandle.classList.contains('nw') || currentHandle.classList.contains('ne')) {
+            const newTop = startTop + (startHeight - newSize);
+            cropArea.style.top = Math.max(0, newTop) + 'px';
+        }
+    }
+}
+
+function stopDragging() {
+    isDragging = false;
+    isResizing = false;
+    currentHandle = null;
+}
+
+downloadButton.addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const size = cropArea.offsetWidth;
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.drawImage(
+        sourceImage,
+        cropArea.offsetLeft,
+        cropArea.offsetTop,
+        size,
+        size,
+        0,
+        0,
+        size,
+        size
+    );
+
+    const link = document.createElement('a');
+    link.download = 'cropped-image.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+});
         
-        // Drag nd drop handlers
-        dragArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dragArea.classList.add('active');
-        });
 
-        dragArea.addEventListener('dragleave', () => {
-            dragArea.classList.remove('active');
-        });
-
-        dragArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dragArea.classList.remove('active');
-            const file = e.dataTransfer.files[0];
-            if (file && isValidFile(file)) {
-                handleFile(file);
-            }
-        });
-
-        function isValidFile(file) {
-            const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-            const maxSize = 30 * 1024 * 1024; // 30MB
-            return validTypes.includes(file.type) && file.size <= maxSize;
-        }
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file && isValidFile(file)) {
-                handleFile(file);
-            }
-        }
-
-        function handleFile(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                sourceImage.src = e.target.result;
-                sourceImage.onload = () => {
-                    cropContainer.style.display = 'block';
-                    downloadButton.style.display = 'block';
-                    initializeCropArea();
-                    setupEventListeners();
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function initializeCropArea() {
-            const size = Math.min(sourceImage.width, sourceImage.height) / 2;
-            cropArea.style.width = size + 'px';
-            cropArea.style.height = size + 'px';
-            cropArea.style.left = (sourceImage.width - size) / 2 + 'px';
-            cropArea.style.top = (sourceImage.height - size) / 2 + 'px';
-        }
-
-        function setupEventListeners() {
-            // Dragging
-            cropArea.addEventListener('mousedown', startDragging);
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', stopDragging);
-
-            // Resizing
-            handles.forEach(handle => {
-                handle.addEventListener('mousedown', (e) => {
-                    isResizing = true;
-                    currentHandle = e.target;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    startWidth = cropArea.offsetWidth;
-                    startHeight = cropArea.offsetHeight;
-                    startLeft = cropArea.offsetLeft;
-                    startTop = cropArea.offsetTop;
-                    e.stopPropagation();
-                });
-            });
-        }
-
-        function startDragging(e) {
-            if (e.target === cropArea) {
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                startLeft = cropArea.offsetLeft;
-                startTop = cropArea.offsetTop;
-            }
-        }
-
-        function drag(e) {
-            if (isDragging) {
-                const deltaX = e.clientX - startX;
-                const deltaY = e.clientY - startY;
-                
-                let newLeft = startLeft + deltaX;
-                let newTop = startTop + deltaY;
-                
-                // Constrainimage boundaries
-                newLeft = Math.max(0, Math.min(newLeft, sourceImage.width - cropArea.offsetWidth));
-                newTop = Math.max(0, Math.min(newTop, sourceImage.height - cropArea.offsetHeight));
-                
-                cropArea.style.left = newLeft + 'px';
-                cropArea.style.top = newTop + 'px';
-            } else if (isResizing) {
-                const deltaX = e.clientX - startX;
-                const deltaY = e.clientY - startY;
-                
-                let newSize = Math.min(startWidth + deltaX, startHeight + deltaY);
-                newSize = Math.max(100, newSize); // Minimum size
-                
-                cropArea.style.width = newSize + 'px';
-                cropArea.style.height = newSize + 'px';
-                
-                if (currentHandle.classList.contains('nw') || currentHandle.classList.contains('sw')) {
-                    const newLeft = startLeft + (startWidth - newSize);
-                    cropArea.style.left = Math.max(0, newLeft) + 'px';
-                }
-                
-                if (currentHandle.classList.contains('nw') || currentHandle.classList.contains('ne')) {
-                    const newTop = startTop + (startHeight - newSize);
-                    cropArea.style.top = Math.max(0, newTop) + 'px';
-                }
-            }
-        }
-
-        function stopDragging() {
-            isDragging = false;
-            isResizing = false;
-            currentHandle = null;
-        }
-
-        downloadButton.addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            const size = cropArea.offsetWidth;
-            canvas.width = size;
-            canvas.height = size;
-            
-            ctx.beginPath();
-            ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.clip();
-            
-            ctx.drawImage(
-                sourceImage,
-                cropArea.offsetLeft,
-                cropArea.offsetTop,
-                size,
-                size,
-                0,
-                0,
-                size,
-                size
-            );
-            
-            const link = document.createElement('a');
-            link.download = 'cropped-image.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
+        
     </script>
 </body>
 </html>
